@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Review Analyser</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0a0a0a;
+    --surface:   #141414;
+    --border:    #262626;
+    --border-hi: #3a3a3a;
+    --accent:    #e5e5e5;
+    --accent2:   #a3a3a3;
+    --neg:       #ef4444;
+    --neu:       #eab308;
+    --pos:       #22c55e;
+    --anger:     #ef4444;
+    --disgust:   #a3a3a3;
+    --fear:      #c084fc;
+    --guilt:     #f472b6;
+    --joy:       #eab308;
+    --sadness:   #94a3b8;
+    --shame:     #737373;
+    --text:      #e5e5e5;
+    --muted:     #737373;
+    --radius:    8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Header */
+  header {
+    position: relative;
+    z-index: 10;
+    padding: 28px 40px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg);
+  }
+
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.1rem;
+    color: var(--text);
+    letter-spacing: .05em;
+  }
+
+  .logo span { color: var(--muted); }
+
+  .stats-bar {
+    display: flex;
+    gap: 28px;
+    font-family: 'Space Mono', monospace;
+    font-size: .72rem;
+    color: var(--muted);
+  }
+
+  .stats-bar b { color: var(--text); }
+
+  /* Layout */
+  main {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+  }
+
+  @media (max-width: 860px) {
+    main { grid-template-columns: 1fr; }
+    header { padding: 20px; }
+  }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    transition: border-color .2s;
+  }
+
+  .card:hover { border-color: var(--border-hi); }
+
+  .card-title {
+    font-family: 'Space Mono', monospace;
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  /* ── Textarea & inputs ── */
+  textarea, input, select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: .95rem;
+    padding: 12px 14px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+    resize: vertical;
+  }
+
+  textarea:focus, input:focus, select:focus {
+    border-color: var(--accent2);
+  }
+
+  textarea { min-height: 120px; }
+
+  select option { background: var(--surface); }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  label {
+    display: block;
+    font-size: .8rem;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 22px;
+    border-radius: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: .8rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    cursor: pointer;
+    border: none;
+    transition: background .15s;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0a0a0a;
+    width: 100%;
+    justify-content: center;
+    margin-top: 16px;
+  }
+
+  .btn-primary:hover { background: #ffffff; }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* Spinner */
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(0,0,0,.25);
+    border-top-color: #0a0a0a;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    display: none;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Result panel */
+  .result-panel {
+    margin-top: 20px;
+    display: none;
+  }
+
+  .verdict {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 18px;
+    border-radius: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+
+  .verdict-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: .75rem;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    flex-shrink: 0;
+  }
+
+  .badge-negative  { background: rgba(239,68,68,.12);  color: var(--neg); }
+  .badge-neutral   { background: rgba(234,179,8,.12);  color: var(--neu); }
+  .badge-positive  { background: rgba(34,197,94,.12);  color: var(--pos); }
+  .badge-anger     { background: rgba(239,68,68,.12);  color: var(--anger); }
+  .badge-disgust   { background: rgba(163,163,163,.12);color: var(--disgust); }
+  .badge-fear      { background: rgba(192,132,252,.12);color: var(--fear); }
+  .badge-guilt     { background: rgba(244,114,182,.12);color: var(--guilt); }
+  .badge-joy       { background: rgba(234,179,8,.12);  color: var(--joy); }
+  .badge-sadness   { background: rgba(148,163,184,.12);color: var(--sadness); }
+  .badge-shame     { background: rgba(115,115,115,.15);color: var(--shame); }
+  .badge-model     { background: rgba(229,229,229,.08);color: var(--text); }
+
+  /* CSV augšupielāde */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  .drop-zone {
+    border: 1px dashed var(--border-hi); border-radius: 8px;
+    padding: 24px 20px; text-align: center; cursor: pointer;
+    transition: border-color .15s; margin-top: 12px;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent);
+  }
+  .drop-zone input[type=file] { display: none; }
+  .drop-zone-text { font-size: .85rem; color: var(--muted); }
+  .drop-zone-text b { color: var(--text); }
+  .file-name {
+    margin-top: 8px; font-family: 'Space Mono', monospace;
+    font-size: .73rem; color: var(--text); display: none;
+  }
+  .btn-secondary {
+    background: transparent; color: var(--text);
+    border: 1px solid var(--border-hi); width: 100%;
+    justify-content: center; margin-top: 10px;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 22px; border-radius: 8px;
+    font-family: 'Space Mono', monospace; font-size: .78rem;
+    font-weight: 700; cursor: pointer; transition: background .15s;
+  }
+  .btn-secondary:hover { background: rgba(255,255,255,.04); }
+  .btn-secondary:disabled { opacity: .5; cursor: not-allowed; }
+  .csv-result {
+    margin-top: 12px; padding: 14px 16px; border-radius: 8px;
+    background: var(--bg); border: 1px solid var(--border);
+    font-size: .83rem; display: none;
+  }
+  .csv-result .queued { color: var(--pos); font-weight: 700; margin-bottom: 4px; }
+
+  .verdict-info { flex: 1; }
+  .verdict-time {
+    font-family: 'Space Mono', monospace;
+    font-size: .7rem;
+    color: var(--muted);
+  }
+
+  /* Probability bars */
+  .prob-section { margin-top: 14px; }
+  .prob-label {
+    font-size: .78rem;
+    color: var(--muted);
+    margin-bottom: 8px;
+    font-family: 'Space Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+  }
+
+  .prob-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 7px;
+  }
+
+  .prob-name {
+    font-size: .78rem;
+    color: var(--muted);
+    width: 72px;
+    flex-shrink: 0;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .prob-bar-wrap {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .prob-bar {
+    height: 100%;
+    border-radius: 3px;
+  }
+
+  .prob-val {
+    font-size: .75rem;
+    font-family: 'Space Mono', monospace;
+    color: var(--muted);
+    width: 36px;
+    text-align: right;
+  }
+
+  /* Search results */
+  .search-meta {
+    font-family: 'Space Mono', monospace;
+    font-size: .72rem;
+    color: var(--muted);
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .auto-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: 'Space Mono', monospace;
+    font-size: .7rem;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: rgba(229,229,229,.06);
+    color: var(--text);
+    border: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+
+  .result-item {
+    padding: 14px 16px;
+    border-radius: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    margin-bottom: 8px;
+    transition: border-color .15s;
+  }
+
+  .result-item:hover { border-color: var(--border-hi); }
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .result-rank {
+    font-family: 'Space Mono', monospace;
+    font-size: .7rem;
+    color: var(--muted);
+    width: 20px;
+  }
+
+  .result-score {
+    font-family: 'Space Mono', monospace;
+    font-size: .7rem;
+    color: var(--text);
+    margin-left: auto;
+  }
+
+  .result-text {
+    font-size: .88rem;
+    color: #94a3b8;
+    line-height: 1.55;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .score-detail {
+    font-family: 'Space Mono', monospace;
+    font-size: .65rem;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  /* ── Full-width stats ── */
+  .full-width { grid-column: 1 / -1; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-top: 4px;
+  }
+
+  .stat-chip {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+
+  .stat-chip .val {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .stat-chip .lbl {
+    font-size: .75rem;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* Empty state */
+  .empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+    font-size: .9rem;
+  }
+
+  .empty svg { opacity: .3; margin-bottom: 12px; }
+
+  /* Error */
+  .error-msg {
+    background: rgba(239,68,68,.08);
+    border: 1px solid rgba(239,68,68,.25);
+    color: var(--neg);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: .85rem;
+    margin-top: 12px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">review<span>_</span>analyser</div>
+  <div class="stats-bar" id="statsBar">
+    <span>Ielādē...</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── Atsauksmju iesniegšana ── -->
+  <div class="card">
+    <div class="card-title">Iesniegt atsauksmi</div>
+
+    <label>Teksts (jebkurā valodā)</label>
+    <textarea id="reviewText" placeholder="Pievieno savu atsauksmi šeit..."></textarea>
+
+    <button class="btn btn-primary" id="submitBtn" onclick="submitReview()">
+      <div class="spinner" id="submitSpinner"></div>
+      <span id="submitLabel">Analizēt</span>
+    </button>
+
+    <div id="reviewError"></div>
+
+    <!-- Rezultāts -->
+    <div class="result-panel" id="reviewResult">
+      <div class="verdict" id="verdict">
+        <div>
+          <span class="verdict-badge" id="sentimentBadge"></span>
+        </div>
+        <div class="verdict-info">
+          <span class="verdict-badge" id="emotionBadge"></span>
+        </div>
+        <div class="verdict-info">
+          <span class="verdict-badge badge-model" id="modelBadge"></span>
+        </div>
+        <div class="verdict-time" id="elapsedTime"></div>
+      </div>
+
+      <div class="prob-section">
+        <div class="prob-label">Noskaņojums</div>
+        <div id="sentimentBars"></div>
+      </div>
+
+      <div class="prob-section" style="margin-top:16px">
+        <div class="prob-label">Emocijas</div>
+        <div id="emotionBars"></div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- CSV augšupielāde -->
+    <div class="card-title" style="margin-bottom:10px">CSV augšupielāde</div>
+
+    <div class="drop-zone" id="dropZone"
+         onclick="document.getElementById('csvFile').click()"
+         ondragover="onDragOver(event)" ondragleave="onDragLeave()"
+         ondrop="onDrop(event)">
+      <input type="file" id="csvFile" accept=".csv" onchange="onFileSelect(event)">
+      <div class="drop-zone-text">
+        <b>Klikšķini vai ievelc CSV failu</b><br>
+        Nepieciešama kolonna: <code>text</code>
+      </div>
+      <div class="file-name" id="fileName"></div>
+    </div>
+
+    <button class="btn-secondary" id="csvBtn" onclick="uploadCsv()" disabled>
+      <div class="spinner" id="csvSpinner" style="border-top-color:var(--accent2)"></div>
+      <span id="csvLabel">Augšupielādēt un apstrādāt</span>
+    </button>
+    <div id="csvError"></div>
+    <div class="csv-result" id="csvResult"></div>
+
+  </div>
+
+  <!-- ── Meklēšana ── -->
+  <div class="card">
+    <div class="card-title">Hibrīdā meklēšana</div>
+
+    <label>Meklēšanas vaicājums</label>
+    <input type="text" id="searchQuery"
+           placeholder="broken battery life, lielisks produkts, ужасный сервис..."
+           onkeydown="if(event.key==='Enter') doSearch()">
+
+    <div class="field-row">
+      <div>
+        <label>Emocijas filtrs</label>
+        <select id="emotionFilter">
+          <option value="">Visas emocijas</option>
+          <option value="anger">dusmas</option>
+          <option value="disgust">riebums</option>
+          <option value="fear">bailes</option>
+          <option value="guilt">vaina</option>
+          <option value="joy">prieks</option>
+          <option value="sadness">skumjas</option>
+          <option value="shame">kauns</option>
+        </select>
+      </div>
+      <div>
+        <label>Noskaņojuma filtrs</label>
+        <select id="sentimentFilter">
+          <option value="">Bez filtra</option>
+          <option value="negative">negatīvs</option>
+          <option value="neutral">neitrāls</option>
+          <option value="positive">pozitīvs</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="searchBtn" onclick="doSearch()">
+      <div class="spinner" id="searchSpinner"></div>
+      <span id="searchLabel">Meklēt</span>
+    </button>
+
+    <div id="searchError"></div>
+
+    <div id="searchResults" style="margin-top:20px">
+      <div class="empty">
+        <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
+        </svg>
+        <p>Ievadiet vaicājumu un nospiediet Meklēt</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Statistika ── -->
+  <div class="card full-width">
+    <div class="card-title">Datu bāzes statistika</div>
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-chip"><div class="val">—</div><div class="lbl">Kopā atsauksmes</div></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const API = 'http://localhost:8000';
+
+// Krāsas
+const SENT_COLORS = { negative:'#ef4444', neutral:'#eab308', positive:'#22c55e' };
+const EMO_COLORS  = {
+  anger:'#ef4444', disgust:'#a3a3a3', fear:'#c084fc',
+  guilt:'#f472b6', joy:'#eab308', sadness:'#94a3b8', shame:'#737373'
+};
+
+// Statistika
+async function loadStats() {
+  try {
+    const r = await fetch(`${API}/api/stats`);
+    const d = await r.json();
+
+    document.getElementById('statsBar').innerHTML = `
+      <span>Kopā: <b>${d.total_reviews.toLocaleString()}</b></span>
+      <span>Pozitīvas: <b style="color:#22c55e">${(d.sentiment_dist.positive||0).toLocaleString()}</b></span>
+      <span>Negatīvas: <b style="color:#ef4444">${(d.sentiment_dist.negative||0).toLocaleString()}</b></span>
+      <span>Neitrālas: <b style="color:#eab308">${(d.sentiment_dist.neutral||0).toLocaleString()}</b></span>
+    `;
+
+    const grid = document.getElementById('statsGrid');
+    const chips = [
+      { val: d.total_reviews.toLocaleString(), lbl: 'Kopā atsauksmes' },
+      ...Object.entries(d.sentiment_dist).map(([k,v]) =>
+        ({ val: v.toLocaleString(), lbl: k, color: SENT_COLORS[k] })),
+      ...Object.entries(d.emotion_dist).slice(0,5).map(([k,v]) =>
+        ({ val: v.toLocaleString(), lbl: k, color: EMO_COLORS[k] })),
+    ];
+    grid.innerHTML = chips.map(c => `
+      <div class="stat-chip">
+        <div class="val" style="${c.color ? `color:${c.color}` : ''}">${c.val}</div>
+        <div class="lbl">${c.lbl}</div>
+      </div>
+    `).join('');
+  } catch(e) {
+    document.getElementById('statsBar').innerHTML =
+      '<span style="color:#ef4444">Nevar savienoties ar serveri</span>';
+  }
+}
+
+// Atsauksmes iesniegšana
+async function submitReview() {
+  const text = document.getElementById('reviewText').value.trim();
+  if (!text) return;
+
+  setLoading('submit', true);
+  document.getElementById('reviewError').innerHTML = '';
+
+  try {
+    const r = await fetch(`${API}/api/review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    if (!r.ok) {
+      const e = await r.json();
+      throw new Error(e.detail || 'Kļūda');
+    }
+    const d = await r.json();
+    showReviewResult(d);
+    loadStats();
+  } catch(e) {
+    document.getElementById('reviewError').innerHTML =
+      `<div class="error-msg">${e.message}</div>`;
+  } finally {
+    setLoading('submit', false);
+  }
+}
+
+function showReviewResult(d) {
+  document.getElementById('sentimentBadge').textContent = d.sentiment;
+  document.getElementById('sentimentBadge').className =
+    `verdict-badge badge-${d.sentiment}`;
+
+  document.getElementById('emotionBadge').textContent = d.emotion;
+  document.getElementById('emotionBadge').className =
+    `verdict-badge badge-${d.emotion}`;
+
+  document.getElementById('modelBadge').textContent = d.model_used;
+  document.getElementById('modelBadge').className = 'verdict-badge badge-model';
+
+  document.getElementById('elapsedTime').textContent = `${d.elapsed_ms} ms`;
+
+  // Sentiment bars
+  document.getElementById('sentimentBars').innerHTML =
+    Object.entries(d.sentiment_probs).map(([k,v]) => probBar(
+      k, v, SENT_COLORS[k] || '#a3a3a3'
+    )).join('');
+
+  // Emotion bars
+  const topEmo = Object.entries(d.emotion_probs)
+    .sort((a,b) => b[1]-a[1]).slice(0, 5);
+  document.getElementById('emotionBars').innerHTML =
+    topEmo.map(([k,v]) => probBar(k, v, EMO_COLORS[k] || '#a3a3a3')).join('');
+
+  document.getElementById('reviewResult').style.display = 'block';
+}
+
+function probBar(name, val, color) {
+  return `
+    <div class="prob-row">
+      <span class="prob-name">${name}</span>
+      <div class="prob-bar-wrap">
+        <div class="prob-bar"
+             style="width:${(val*100).toFixed(1)}%;background:${color}"></div>
+      </div>
+      <span class="prob-val">${(val*100).toFixed(1)}%</span>
+    </div>`;
+}
+
+// Meklēšana
+async function doSearch() {
+  const query = document.getElementById('searchQuery').value.trim();
+  if (!query) return;
+
+  setLoading('search', true);
+  document.getElementById('searchError').innerHTML = '';
+
+  const emotion_filter   = document.getElementById('emotionFilter').value   || null;
+  const sentiment_filter = document.getElementById('sentimentFilter').value || null;
+
+  try {
+    const r = await fetch(`${API}/api/search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query, emotion_filter, sentiment_filter,
+        auto_filter: !sentiment_filter,
+        top_k: 10,
+      }),
+    });
+    if (!r.ok) throw new Error('Meklēšanas kļūda');
+    const d = await r.json();
+    showSearchResults(d, query);
+  } catch(e) {
+    document.getElementById('searchError').innerHTML =
+      `<div class="error-msg">${e.message}</div>`;
+  } finally {
+    setLoading('search', false);
+  }
+}
+
+function showSearchResults(d, query) {
+  const el = document.getElementById('searchResults');
+
+  if (!d.results.length) {
+    el.innerHTML = '<div class="empty"><p>Nav rezultātu</p></div>';
+    return;
+  }
+
+  const autoTag = d.auto_sentiment
+    ? `<span class="auto-tag">auto sentiment = ${d.auto_sentiment}</span>` : '';
+
+  const meta = `
+    <div>${autoTag}</div>
+    <div class="search-meta">
+      <span>${d.total_found} atrastas | top ${d.results.length}</span>
+      <span>${d.elapsed_ms} ms</span>
+    </div>`;
+
+  const items = d.results.map((r, i) => `
+    <div class="result-item">
+      <div class="result-header">
+        <span class="result-rank">#${i+1}</span>
+        <span class="verdict-badge badge-${r.sentiment}">${r.sentiment}</span>
+        <span class="verdict-badge badge-${r.emotion}">${r.emotion}</span>
+        <span class="result-score">${r.hybrid.toFixed(4)}</span>
+      </div>
+      <div class="result-text">${escHtml(r.text)}</div>
+      <div class="score-detail">bm25=${r.bm25.toFixed(4)} · labse=${r.labse.toFixed(4)}</div>
+    </div>`).join('');
+
+  el.innerHTML = meta + items;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Loading state
+function setLoading(type, on) {
+  const btn     = document.getElementById(`${type}Btn`);
+  const spinner = document.getElementById(`${type}Spinner`);
+  const label   = document.getElementById(`${type}Label`);
+  btn.disabled          = on;
+  spinner.style.display = on ? 'block' : 'none';
+  label.textContent     = on
+    ? { submit: 'Apstrādā...', search: 'Meklē...', csv: 'Sūta...' }[type]
+    : { submit: 'Analizēt',   search: 'Meklēt',   csv: 'Augšupielādēt un apstrādāt' }[type];
+}
+
+// Init
+// CSV drag n drop
+let selectedFile = null;
+
+function onDragOver(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.add('drag-over');
+}
+function onDragLeave() {
+  document.getElementById('dropZone').classList.remove('drag-over');
+}
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) setFile(f);
+}
+function onFileSelect(e) {
+  if (e.target.files[0]) setFile(e.target.files[0]);
+}
+function setFile(f) {
+  selectedFile = f;
+  const fn = document.getElementById('fileName');
+  fn.textContent = `${f.name}  (${(f.size/1024).toFixed(1)} KB)`;
+  fn.style.display = 'block';
+  document.getElementById('csvBtn').disabled = false;
+}
+
+// CSV augšupielāde
+async function uploadCsv() {
+  if (!selectedFile) return;
+  setLoading('csv', true);
+  document.getElementById('csvError').innerHTML = '';
+  document.getElementById('csvResult').style.display = 'none';
+
+  const form = new FormData();
+  form.append('file', selectedFile);
+
+  try {
+    const r = await fetch(`${API}/api/upload-csv`, { method: 'POST', body: form });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Kļūda');
+
+    const el = document.getElementById('csvResult');
+    el.innerHTML = `
+      <div class="queued">${d.queued} atsauksmes nosūtītas</div>
+      <div style="color:var(--muted)">
+        Izlaisti: <b>${d.skipped}</b> &nbsp;|&nbsp; ${d.message}
+      </div>
+      <div style="margin-top:6px;font-size:.75rem;color:var(--muted)">
+        Palaid <code>python consumer.py</code> lai apstrādātu datus.
+      </div>`;
+    el.style.display = 'block';
+  } catch(e) {
+    document.getElementById('csvError').innerHTML =
+      `<div class="error-msg">${e.message}</div>`;
+  } finally {
+    setLoading('csv', false);
+  }
+}
+
+loadStats();
+setInterval(loadStats, 30000);
+</script>
+</body>
+</html>
