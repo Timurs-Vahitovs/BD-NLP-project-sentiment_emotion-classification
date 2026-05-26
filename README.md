@@ -19,7 +19,7 @@ Jāpalaiž trīs procesi šādā secībā, katrs savā terminālī.
   python -m uvicorn api:app --reload --host 0.0.0.0 --port 8000
 
 3. Consumer (vajadzīgs CSV apstrādei)
-  cd BD_project/db
+  cd BD_project/main
   python consumer.py
 
 Web interfeiss: http://localhost:8000
