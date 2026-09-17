@@ -24,7 +24,8 @@ Jāpalaiž trīs procesi sekojošā secībā, katrs savā terminālī.
 
 Web interfeiss: http://localhost:8000  
 
-**Paši modeļu faili nav augšupielādēti pārāk liela izmēra dēļ.**
+**Paši modeļu faili nav augšupielādēti pārāk liela izmēra dēļ.**  
+Var iegūt palaižot Jupyter notebook failus
 
 ## CSV
 
