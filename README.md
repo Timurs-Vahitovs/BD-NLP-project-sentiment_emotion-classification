@@ -8,7 +8,7 @@ pip install fastapi uvicorn pika psycopg2-binary pgvector sentence-transformers 
 
 ## Palaišana
 
-Jāpalaiž trīs procesi šādā secībā, katrs savā terminālī.
+Jāpalaiž trīs procesi sekojošā secībā, katrs savā terminālī.
 
 1. Docker konteinerus (PostgreSQL + RabbitMQ)
   cd BD_project/main
@@ -22,31 +22,13 @@ Jāpalaiž trīs procesi šādā secībā, katrs savā terminālī.
   cd BD_project/main
   python consumer.py
 
-Web interfeiss: http://localhost:8000
+Web interfeiss: http://localhost:8000  
 
-## Mapes struktūra
+**Paši modeļu faili nav augšupielādēti pārāk liela izmēra dēļ.**
 
-BD_project/
-  db/
-    api.py
-    consumer.py
-    index.html
-    docker-compose.yml
-    init.sql
-  xlmr-isear-final/
-  xlmr-sentiment-final.pt
-  xlmr-sentiment-tokenizer/
-  distilbert-isear-final/
-  distilbert-sentiment-final.pt
-  distilbert-sentiment-tokenizer/
+## CSV
 
-## CSV formāts
-
-text
-This product is amazing!
-Terrible quality, broke after one day.
-
-Fails jābūt UTF-8 kodējumā. Pirmā rinda ir galvene.
+Failam jābūt UTF-8 kodējumā. Pirmā rinda ir galvene. Atsauksmes tekstam jābūt zem "text" kolonnas
 
 ## Porti
 
@@ -57,5 +39,5 @@ Fails jābūt UTF-8 kodējumā. Pirmā rinda ir galvene.
 
 ## Apturēšana
 
-docker compose stop      # aptur konteinerus (dati saglabājas)
+docker compose stop      # aptur konteinerus (dati saglabājas)  
 docker compose down -v   # dzēš konteinerus un datus
